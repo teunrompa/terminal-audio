@@ -6,4 +6,4 @@ edition = "2024"
 [dependencies]
 crossterm = "0.29.0"
 ratatui = "0.30.0"
-cpal = "0.17.1"
+rodio = "0.21.1"

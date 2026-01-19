@@ -6,6 +6,8 @@ use ratatui::{
     widgets::{Block, Widget},
 };
 
+use crate::engine::AudioEngine;
+
 #[derive(Default)]
 pub struct App {
     app_state: AppState,
@@ -18,9 +20,17 @@ enum AppState {
     Stopping,
 }
 
+enum AppWindows {
+    Mixer,
+    DeviceEditor,
+}
+
 impl App {
     /// runs the application's main loop until the user quits
     pub fn run(&mut self, terminal: &mut DefaultTerminal) -> io::Result<()> {
+        AudioEngine::new()
+            .run()
+            .expect("Audio engine failed to start");
         while self.app_state == AppState::Running {
             terminal.draw(|frame| self.draw(frame))?;
             self.handle_events()?;
@@ -45,6 +55,7 @@ impl App {
         Ok(())
     }
 
+    //TODO: implement key handeling at specific context
     fn handle_keys(&mut self, key_event: KeyEvent) {
         match key_event.code {
             KeyCode::Char('q') => self.app_state = AppState::Stopping,

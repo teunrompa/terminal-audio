@@ -11,6 +11,7 @@ use crate::engine::AudioEngine;
 #[derive(Default)]
 pub struct App {
     app_state: AppState,
+    audio_engine: AudioEngine,
 }
 
 #[derive(PartialEq, Default)]
@@ -26,17 +27,24 @@ enum AppWindows {
 }
 
 impl App {
+    pub fn new(&mut self) -> Self {
+        App {
+            app_state: AppState::Running,
+            audio_engine: AudioEngine::new(),
+        }
+    }
     /// runs the application's main loop until the user quits
     pub fn run(&mut self, terminal: &mut DefaultTerminal) -> io::Result<()> {
-        AudioEngine::new()
-            .run()
-            .expect("Audio engine failed to start");
         while self.app_state == AppState::Running {
             terminal.draw(|frame| self.draw(frame))?;
             self.handle_events()?;
         }
 
         Ok(())
+    }
+
+    fn get_audio_engine(&self) -> &AudioEngine {
+        &self.audio_engine
     }
 
     fn draw(&self, frame: &mut Frame) {
@@ -61,6 +69,7 @@ impl App {
             KeyCode::Char('q') => self.app_state = AppState::Stopping,
             KeyCode::Char('l') => todo!(), //TODO:: implement next window
             KeyCode::Char('h') => todo!(), //TODO:: implement prevuis window
+            KeyCode::Char('t') => self.audio_engine.new_track(),
             _ => {}
         }
     }
@@ -72,6 +81,13 @@ impl Widget for &App {
         Self: Sized,
     {
         let block = Block::bordered().title("Terminal Daw app");
+
+        let inner = block.inner(area);
+
+        let audio_engine = self.get_audio_engine();
+
+        audio_engine.render(inner, buf);
+
         block.render(area, buf);
     }
 }

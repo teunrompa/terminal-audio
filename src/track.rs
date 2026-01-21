@@ -16,6 +16,14 @@ impl Track {
         }
     }
 
+    pub fn get_name(&self) -> &str {
+        &self.name
+    }
+
+    pub fn get_volume(&self) -> f32 {
+        self.volume
+    }
+
     pub fn decrease_volume(&mut self, amount: f32) {
         self.volume -= amount;
     }

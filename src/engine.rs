@@ -4,7 +4,7 @@ use std::{
     time::Duration,
 };
 
-use rodio::{Source, StreamError, mixer::Mixer, source::SineWave};
+use rodio::{Source, StreamError, source::SineWave};
 
 //Main playback and processing point
 pub struct AudioEngine {
@@ -30,6 +30,7 @@ impl AudioEngine {
 
         let handle = thread::spawn(move || {
             if let Ok(steam_handle) = rodio::OutputStreamBuilder::open_default_stream() {
+                //TODO: This needs to be implemented for Track
                 let duration = Duration::from_secs_f32(3.0);
                 let mixer = steam_handle.mixer();
                 let source = SineWave::new(74.0).amplify(0.3).take_duration(duration);

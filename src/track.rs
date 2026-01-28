@@ -1,18 +1,26 @@
-use rodio::Source;
-
 //Contains state of the voulume and the sound source
 pub struct Track {
     volume: f32,
-    source: Option<Box<dyn Source>>, //Source option for a track witch can also be empty
     name: String,
+    devices: Vec<Device>,
+}
+
+pub struct Device {
+    device_type: DeviceType,
+}
+
+pub enum DeviceType {
+    Fx,
+    Synth,
+    Analyzer,
 }
 
 impl Track {
-    pub fn new(volume: f32, source: Option<Box<dyn Source>>, name: String) -> Self {
+    pub fn new(volume: f32, name: String) -> Self {
         Track {
             volume,
-            source,
             name,
+            devices: Vec::new(),
         }
     }
 
@@ -34,9 +42,5 @@ impl Track {
 
     pub fn rename(&mut self, new_name: String) {
         self.name = new_name;
-    }
-
-    pub fn change_source(&mut self, new_source: Option<Box<dyn Source>>) {
-        self.source = new_source;
     }
 }

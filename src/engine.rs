@@ -68,9 +68,9 @@ impl AudioEngine {
             },
             |err| eprintln!("Output error: {}", err),
             None,
-        );
+        )?;
 
-        stream.unwrap().play();
+        stream.play();
 
         Ok(())
     }

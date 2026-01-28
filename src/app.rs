@@ -90,3 +90,9 @@ impl Widget for &App {
         block.render(area, buf);
     }
 }
+
+impl Default for App {
+    fn default() -> Self {
+        Self::new()
+    }
+}

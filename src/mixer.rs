@@ -17,3 +17,9 @@ impl Mixer {
         self.sample_rate = sample_rate;
     }
 }
+
+impl Default for Mixer {
+    fn default() -> Self {
+        Self::new()
+    }
+}

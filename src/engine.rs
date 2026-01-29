@@ -8,13 +8,13 @@ use cpal::{
     Device, SupportedStreamConfig,
     traits::{DeviceTrait, HostTrait, StreamTrait},
 };
-use crossterm::event::KeyEvent;
+use crossterm::event::{KeyCode, KeyEvent};
 
 use crate::mixer::Mixer;
 
 pub struct AudioEngine {
     sample_rate: f32,
-    state: AudioEngineState,
+    state: Arc<Mutex<AudioEngineState>>,
     stream_config: SupportedStreamConfig,
     channels: usize,
     device: Device,
@@ -40,7 +40,7 @@ impl AudioEngine {
 
         Ok(AudioEngine {
             sample_rate,
-            state: AudioEngineState::Stopping,
+            state: Arc::new(Mutex::new(AudioEngineState::Stopping)),
             device,
             stream_config: config,
             channels,
@@ -58,6 +58,21 @@ impl AudioEngine {
 
     pub fn handle_keyboard_input(&mut self, key_event: KeyEvent) {
         self.mixer.lock().unwrap().handle_keyboard_input(key_event);
+
+        match key_event.code {
+            KeyCode::Char('p') => self.handle_stop_start(),
+            KeyCode::Char('w') => todo!(), //TODO: implement next window
+            _ => {}
+        }
+    }
+
+    pub fn handle_stop_start(&mut self) {
+        let mut current_state = self.state.lock().unwrap();
+
+        *current_state = match *current_state {
+            AudioEngineState::Playing => AudioEngineState::Stopping,
+            AudioEngineState::Stopping => AudioEngineState::Playing,
+        }
     }
 
     pub fn process(&mut self) -> Result<(), Box<dyn std::error::Error>> {
@@ -65,7 +80,8 @@ impl AudioEngine {
         let device = self.device.clone();
         let stream_config = self.stream_config.clone();
 
-        let mut mixer = Arc::clone(&self.mixer);
+        let mixer = Arc::clone(&self.mixer);
+        let state = Arc::clone(&self.state);
 
         let handle = thread::spawn(move || -> Result<(), Box<dyn std::error::Error + Send>> {
             let stream = device
@@ -77,7 +93,7 @@ impl AudioEngine {
                             //TODO: This should be conunously running
                             // Write to all channels
                             for sample in frame.iter_mut() {
-                                *sample = mixer_output * 0.3; // Reduced volume
+                                *sample = mixer_output; // Reduced volume
                             }
                         }
                     },
@@ -88,7 +104,18 @@ impl AudioEngine {
 
             stream.play().expect("error could not play stream");
 
-            thread::sleep(Duration::from_secs(1));
+            loop {
+                {
+                    let current_state = state.lock().unwrap();
+
+                    if *current_state == AudioEngineState::Stopping {
+                        break;
+                    }
+                }
+
+                thread::sleep(Duration::from_millis(100)); //Restearting loop evry 100ms
+            }
+
             Ok(())
         });
 

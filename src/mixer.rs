@@ -22,7 +22,7 @@ impl Mixer {
         Mixer {
             tracks: HashMap::new(),
             selected_track: 0,
-            master_volume: 1.0,
+            master_volume: 0.3,
             sample_rate,
         }
     }
@@ -130,7 +130,7 @@ impl Widget for &Mixer {
 
         BarChart::default()
             .bar_gap(10)
-            .bar_width(10)
+            .bar_width(5)
             .data(group)
             .render(area, buf);
     }

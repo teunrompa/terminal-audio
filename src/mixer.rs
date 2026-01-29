@@ -33,10 +33,14 @@ impl Mixer {
         self.selected_track = last_track_id;
     }
 
+    pub fn remove_track_at(&mut self, id: usize) {
+        self.tracks.remove_entry(&id);
+    }
+
     pub fn handle_keyboard_input(&mut self, key_event: KeyEvent) {
         match key_event.code {
             KeyCode::Char('t') => self.add_track(10.0, "new track".to_string()),
-            KeyCode::Char('r') => todo!(), //TODO: remove track
+            KeyCode::Char('r') => self.remove_track_at(self.selected_track),
             _ => {}
         }
     }

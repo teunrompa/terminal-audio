@@ -4,6 +4,8 @@ use cpal::{
     Device, SupportedStreamConfig,
     traits::{DeviceTrait, HostTrait, StreamTrait},
 };
+use crossterm::event::{KeyCode, KeyEvent};
+use ratatui::widgets::Widget;
 
 use crate::mixer::Mixer;
 
@@ -43,8 +45,16 @@ impl AudioEngine {
         })
     }
 
+    pub fn get_mixer(&self) -> &Mixer {
+        &self.mixer
+    }
+
     pub fn prepare(&mut self, sample_rate: f32) {
         self.sample_rate = sample_rate;
+    }
+
+    pub fn handle_keyboard_input(&mut self, key_event: KeyEvent) {
+        self.mixer.handle_keyboard_input(key_event);
     }
 
     pub fn process(&mut self) -> Result<(), Box<dyn std::error::Error>> {

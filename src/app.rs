@@ -73,6 +73,9 @@ impl App {
             KeyCode::Char('p') => self.audio_engine.process().unwrap(),
             _ => {}
         };
+
+        //Pass input down to lower levels
+        self.audio_engine.handle_keyboard_input(key_event);
     }
 }
 
@@ -85,7 +88,9 @@ impl Widget for &App {
 
         let inner = block.inner(area);
 
-        let audio_engine = self.get_audio_engine();
+        let mixer = self.audio_engine.get_mixer();
+
+        mixer.render(inner, buf);
 
         block.render(area, buf);
     }

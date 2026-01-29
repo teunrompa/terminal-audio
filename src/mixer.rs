@@ -1,3 +1,5 @@
+use crossterm::event::{KeyCode, KeyEvent};
+
 use crate::track::Track;
 
 pub struct Mixer {
@@ -15,6 +17,14 @@ impl Mixer {
 
     pub fn prepare(&mut self, sample_rate: f64) {
         self.sample_rate = sample_rate;
+    }
+
+    pub fn handle_keyboard_input(&mut self, key_event: KeyEvent) {
+        match key_event.code {
+            KeyCode::Char('t') => todo!(), //TODO: add new track
+            KeyCode::Char('r') => todo!(), //TODO: remove track
+            _ => {}
+        }
     }
 }
 

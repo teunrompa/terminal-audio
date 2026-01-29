@@ -1,3 +1,5 @@
+use std::{thread, time::Duration};
+
 use cpal::{
     Device, SupportedStreamConfig,
     traits::{DeviceTrait, HostTrait, StreamTrait},
@@ -50,27 +52,36 @@ impl AudioEngine {
         let frequency = 440.0; // A4 note
         let sample_rate = self.sample_rate;
         let channels = self.channels;
+        let device = self.device.clone();
         let stream_config = self.stream_config.clone();
 
-        let stream = self.device.build_output_stream(
-            &stream_config.into(),
-            move |data: &mut [f32], _: &cpal::OutputCallbackInfo| {
-                for frame in data.chunks_mut(channels) {
-                    let value =
-                        (sample_clock * frequency * 2.0 * std::f32::consts::PI / sample_rate).sin();
-                    sample_clock = (sample_clock + 1.0) % sample_rate;
+        let handle = thread::spawn(move || -> Result<(), Box<dyn std::error::Error + Send>> {
+            let stream = device
+                .build_output_stream(
+                    &stream_config.into(),
+                    move |data: &mut [f32], _: &cpal::OutputCallbackInfo| {
+                        for frame in data.chunks_mut(channels) {
+                            let value = (sample_clock * frequency * 2.0 * std::f32::consts::PI
+                                / sample_rate)
+                                .sin();
+                            sample_clock = (sample_clock + 1.0) % sample_rate;
 
-                    // Write to all channels
-                    for sample in frame.iter_mut() {
-                        *sample = value * 0.3; // Reduced volume
-                    }
-                }
-            },
-            |err| eprintln!("Output error: {}", err),
-            None,
-        )?;
+                            // Write to all channels
+                            for sample in frame.iter_mut() {
+                                *sample = value * 0.3; // Reduced volume
+                            }
+                        }
+                    },
+                    |err| eprintln!("Output error: {}", err),
+                    None,
+                )
+                .expect("error building output stream");
 
-        stream.play();
+            stream.play().expect("error could not play stream");
+
+            thread::sleep(Duration::from_secs(1));
+            Ok(())
+        });
 
         Ok(())
     }

@@ -1,9 +1,6 @@
 use std::collections::HashMap;
 
-use crossterm::{
-    event::{KeyCode, KeyEvent},
-    style::Color,
-};
+use crossterm::event::{KeyCode, KeyEvent};
 use ratatui::{
     style::Style,
     widgets::{Bar, BarChart, BarGroup, Widget},
@@ -14,28 +11,44 @@ use crate::track::Track;
 //Sums all levels from track and mixes it together
 //Also used for managing track behavoir on a high level
 pub struct Mixer {
-    sample_rate: f64,
+    sample_rate: f32,
     tracks: HashMap<usize, Track>,
     selected_track: usize,
+    master_volume: f32,
 }
 
 impl Mixer {
-    pub fn new() -> Self {
+    pub fn new(sample_rate: f32) -> Self {
         Mixer {
             tracks: HashMap::new(),
-            sample_rate: 0.0,
             selected_track: 0,
+            master_volume: 1.0,
+            sample_rate,
         }
     }
 
-    pub fn prepare(&mut self, sample_rate: f64) {
+    pub fn prepare(&mut self, sample_rate: f32) {
         self.sample_rate = sample_rate;
+    }
+
+    pub fn get_output(&mut self) -> f32 {
+        let mut output = 0.0;
+
+        for track in self.tracks.iter_mut() {
+            output += track.1.get_output();
+        }
+
+        output *= self.master_volume;
+
+        //Limit the volume
+        output.clamp(-1.0, 1.0)
     }
 
     //Create new track and store the id in the hashmap
     pub fn add_track(&mut self, volume: f32, name: String) {
         let last_track_id = self.tracks.len();
-        self.tracks.insert(last_track_id, Track::new(volume, name));
+        self.tracks
+            .insert(last_track_id, Track::new(volume, name, self.sample_rate));
     }
 
     pub fn next_track(&mut self) {
@@ -49,6 +62,7 @@ impl Mixer {
             self.selected_track = 0;
         }
     }
+
     pub fn previous_track(&mut self) {
         if self.tracks.is_empty() {
             return;
@@ -78,7 +92,7 @@ impl Mixer {
 
 impl Default for Mixer {
     fn default() -> Self {
-        Self::new()
+        Self::new(441000.0)
     }
 }
 
@@ -93,6 +107,7 @@ impl Widget for &Mixer {
         let mut track_ids: Vec<_> = self.tracks.keys().collect();
         track_ids.sort();
 
+        //Sorts rendering order for the tracks
         for id in track_ids {
             let track = &self.tracks[id];
             let track_name = format!("{} new track", id);

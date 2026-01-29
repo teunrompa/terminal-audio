@@ -1,11 +1,14 @@
-use std::{thread, time::Duration};
+use std::{
+    sync::{Arc, Mutex, MutexGuard},
+    thread,
+    time::Duration,
+};
 
 use cpal::{
     Device, SupportedStreamConfig,
     traits::{DeviceTrait, HostTrait, StreamTrait},
 };
-use crossterm::event::{KeyCode, KeyEvent};
-use ratatui::widgets::Widget;
+use crossterm::event::KeyEvent;
 
 use crate::mixer::Mixer;
 
@@ -15,7 +18,7 @@ pub struct AudioEngine {
     stream_config: SupportedStreamConfig,
     channels: usize,
     device: Device,
-    mixer: Mixer,
+    mixer: Arc<Mutex<Mixer>>,
 }
 
 #[derive(PartialEq, Clone)]
@@ -41,12 +44,12 @@ impl AudioEngine {
             device,
             stream_config: config,
             channels,
-            mixer: Mixer::new(),
+            mixer: Arc::new(Mutex::new(Mixer::new(sample_rate))),
         })
     }
 
-    pub fn get_mixer(&self) -> &Mixer {
-        &self.mixer
+    pub fn get_mixer(&self) -> MutexGuard<Mixer> {
+        self.mixer.lock().unwrap()
     }
 
     pub fn prepare(&mut self, sample_rate: f32) {
@@ -54,16 +57,15 @@ impl AudioEngine {
     }
 
     pub fn handle_keyboard_input(&mut self, key_event: KeyEvent) {
-        self.mixer.handle_keyboard_input(key_event);
+        self.mixer.lock().unwrap().handle_keyboard_input(key_event);
     }
 
     pub fn process(&mut self) -> Result<(), Box<dyn std::error::Error>> {
-        let mut sample_clock = 0f32;
-        let frequency = 440.0; // A4 note
-        let sample_rate = self.sample_rate;
         let channels = self.channels;
         let device = self.device.clone();
         let stream_config = self.stream_config.clone();
+
+        let mut mixer = Arc::clone(&self.mixer);
 
         let handle = thread::spawn(move || -> Result<(), Box<dyn std::error::Error + Send>> {
             let stream = device
@@ -71,14 +73,11 @@ impl AudioEngine {
                     &stream_config.into(),
                     move |data: &mut [f32], _: &cpal::OutputCallbackInfo| {
                         for frame in data.chunks_mut(channels) {
-                            let value = (sample_clock * frequency * 2.0 * std::f32::consts::PI
-                                / sample_rate)
-                                .sin();
-                            sample_clock = (sample_clock + 1.0) % sample_rate;
-
+                            let mixer_output = mixer.lock().unwrap().get_output();
+                            //TODO: This should be conunously running
                             // Write to all channels
                             for sample in frame.iter_mut() {
-                                *sample = value * 0.3; // Reduced volume
+                                *sample = mixer_output * 0.3; // Reduced volume
                             }
                         }
                     },

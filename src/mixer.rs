@@ -2,8 +2,8 @@ use std::collections::HashMap;
 
 use crossterm::event::{KeyCode, KeyEvent};
 use ratatui::{
-    style::Style,
-    widgets::{Bar, BarChart, BarGroup, Widget},
+    style::{Color, Style},
+    widgets::{Bar, BarChart, BarGroup, Block, Borders, Widget},
 };
 
 use crate::track::Track;
@@ -13,24 +13,49 @@ use crate::track::Track;
 pub struct Mixer {
     sample_rate: f32,
     tracks: HashMap<usize, Track>,
-    selected_track: usize,
+    track_order: Vec<usize>,
+    selected_index: usize,
     master_volume: f32,
     increment_volume: f32,
+    bpm: f32,
+    next_id: usize,
 }
 
 impl Mixer {
-    pub fn new(sample_rate: f32) -> Self {
+    pub fn new(sample_rate: f32, bpm: f32) -> Self {
         Mixer {
             tracks: HashMap::new(),
-            selected_track: 0,
+            track_order: Vec::new(),
+            selected_index: 0,
             master_volume: 0.3,
             sample_rate,
             increment_volume: 0.1,
+            bpm,
+            next_id: 0,
         }
     }
 
     pub fn prepare(&mut self, sample_rate: f32) {
         self.sample_rate = sample_rate;
+    }
+
+    //Main audio processing function
+    pub fn process_block(&mut self, num_samples: usize) -> Vec<f32> {
+        let mut mix = vec![0.0f32; num_samples];
+
+        for (_i, track) in &mut self.tracks {
+            let track_output = track.process_block(num_samples);
+
+            for (i, sample) in track_output.iter().enumerate() {
+                mix[i] += sample;
+            }
+        }
+
+        for sample in &mut mix {
+            *sample = (*sample * self.master_volume).tanh(); //Softclipping 
+        }
+
+        mix
     }
 
     pub fn get_output(&mut self) -> f32 {
@@ -47,22 +72,32 @@ impl Mixer {
     }
 
     //Create new track and store the id in the hashmap
-    pub fn add_track(&mut self, volume: f32, name: String) {
-        let last_track_id = self.tracks.len();
-        self.tracks
-            .insert(last_track_id, Track::new(volume, name, self.sample_rate));
+    pub fn add_track(&mut self, volume: f32, name: String, length: usize, step_division: u8) {
+        let id = self.next_id;
+        self.next_id += 1;
+
+        let track = Track::new(
+            volume,
+            name,
+            self.sample_rate,
+            self.bpm,
+            length,
+            step_division,
+        );
+
+        self.tracks.insert(id, track);
+
+        self.track_order.push(id);
+
+        self.selected_index = self.track_order.len() - 1;
     }
 
     fn next_track(&mut self) {
-        if self.tracks.is_empty() {
+        if self.track_order.is_empty() {
             return;
         }
 
-        if self.selected_track < self.tracks.len() - 1 {
-            self.selected_track += 1
-        } else {
-            self.selected_track = 0;
-        }
+        self.selected_index = (self.selected_index + 1) % self.track_order.len();
     }
 
     fn previous_track(&mut self) {
@@ -70,43 +105,78 @@ impl Mixer {
             return;
         }
 
-        if self.selected_track > 0 {
-            self.selected_track -= 1
+        self.selected_index = if self.selected_index == 0 {
+            self.track_order.len() - 1
         } else {
-            self.selected_track = self.tracks.len() - 1; //Loop around
+            self.selected_index - 1
+        };
+    }
+
+    pub fn remove_selected_track(&mut self) {
+        if self.track_order.is_empty() {
+            return;
+        }
+
+        let id = self.track_order[self.selected_index];
+        self.tracks.remove(&id);
+        self.track_order.remove(self.selected_index);
+
+        if self.selected_index >= self.track_order.len() && self.selected_index > 0 {
+            self.selected_index -= 1;
         }
     }
 
-    fn remove_track_at(&mut self, id: usize) {
-        self.tracks.remove_entry(&id);
+    fn selected_track(&mut self) -> Option<&mut Track> {
+        self.track_order
+            .get(self.selected_index)
+            .and_then(|id| self.tracks.get_mut(id))
     }
 
-    fn get_selected_track(&mut self) -> Option<&mut Track> {
-        self.tracks.get_mut(&self.selected_track)
+    pub fn get_track_id(&mut self, id: usize) -> Option<&mut Track> {
+        self.tracks.get_mut(&id)
     }
 
+    //TODO: Set max volume
     fn increment_selected_track_volume(&mut self) {
-        let increment = self.increment_volume;
-        let track = self.get_selected_track();
-
-        if let Some(track) = track {
-            track.increse_volume(increment);
+        let inccrement = self.increment_volume;
+        if let Some(track) = self.selected_track() {
+            track.increse_volume(inccrement);
         }
     }
 
     fn decrease_selected_track_volume(&mut self) {
         let increment = self.increment_volume;
-        let track = self.get_selected_track();
-
-        if let Some(track) = track {
+        if let Some(track) = self.selected_track() {
             track.decrease_volume(increment);
+        }
+    }
+
+    pub fn set_master_volumne(&mut self, vol: f32) {
+        self.master_volume = vol.clamp(0.0, 2.0);
+    }
+
+    //Updates bpm for all tracks
+    pub fn set_bpm(&mut self, bpm: f32) {
+        self.bpm = bpm;
+
+        for track in self.tracks.values_mut() {
+            track.set_bpm(bpm);
+        }
+    }
+
+    pub fn set_sample_rate(&mut self, sample_rate: f32) {
+        self.sample_rate = sample_rate;
+
+        for track in self.tracks.values_mut() {
+            track.set_sample_rate(sample_rate);
         }
     }
 
     pub fn handle_keyboard_input(&mut self, key_event: KeyEvent) {
         match key_event.code {
-            KeyCode::Char('t') => self.add_track(0.3, "new track".to_string()),
-            KeyCode::Char('r') => self.remove_track_at(self.selected_track),
+            //TODO: implement params from the UI
+            KeyCode::Char('t') => self.add_track(0.3, format!("Track {}", self.next_id), 16, 16),
+            KeyCode::Char('r') => self.remove_selected_track(),
             KeyCode::Right => self.next_track(),
             KeyCode::Left => self.previous_track(),
             KeyCode::Up => self.increment_selected_track_volume(),
@@ -116,49 +186,52 @@ impl Mixer {
     }
 }
 
-impl Default for Mixer {
-    fn default() -> Self {
-        Self::new(44100.0)
-    }
-}
-
 impl Widget for &Mixer {
     fn render(self, area: ratatui::prelude::Rect, buf: &mut ratatui::prelude::Buffer)
     where
         Self: Sized,
     {
-        let mut bars = vec![];
-
-        //Determine bar color
-        let mut track_ids: Vec<_> = self.tracks.keys().collect();
-        track_ids.sort();
-
-        //Sorts rendering order for the tracks
-        for id in track_ids {
-            let track = &self.tracks[id];
-            let track_name = format!("{} new track", id);
-
-            let style = if *id == self.selected_track {
-                Style::default().bold().red()
-            } else {
-                Style::default().blue()
-            };
-
-            bars.push(
-                Bar::default()
-                    .value((track.get_volume() * 100.0) as u64)
-                    .label("Volume")
-                    .text_value(format!("{track_name:>}"))
-                    .style(style),
-            );
+        if self.track_order.is_empty() {
+            return;
         }
 
-        let group = BarGroup::new(bars);
+        let bars: Vec<Bar> = self
+            .track_order
+            .iter()
+            .enumerate()
+            .map(|(idx, id)| {
+                let track = &self.tracks[id];
+                let is_selected = idx == self.selected_index;
+
+                let vol_percent = (track.get_volume() * 100.0) as u64;
+
+                let style = if is_selected {
+                    Style::default().fg(Color::Cyan).bg(Color::DarkGray)
+                } else {
+                    Style::default().fg(Color::Gray)
+                };
+
+                Bar::default()
+                    .value(vol_percent.clamp(0, 100))
+                    .label(track.get_name())
+                    .text_value(format!("Vol% {}", vol_percent))
+                    .style(style)
+            })
+            .collect();
 
         BarChart::default()
-            .bar_gap(10)
-            .bar_width(7)
-            .data(group)
+            .block(
+                Block::default()
+                    .title(format!(
+                        "Mixer | BPM {:.1} | Master: {:.0}%",
+                        self.bpm,
+                        self.master_volume * 100.0
+                    ))
+                    .borders(Borders::ALL),
+            )
+            .bar_width(10)
+            .bar_gap(2)
+            .data(BarGroup::new(bars))
             .max(100)
             .render(area, buf);
     }

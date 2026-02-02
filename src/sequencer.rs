@@ -12,7 +12,7 @@ pub struct Sequencer {
 }
 
 #[derive(Clone, Copy, Debug)]
-struct NoteEvent {
+pub struct NoteEvent {
     pub frequency: f32,
     pub velocity: f32,
     pub duration_steps: usize,
@@ -49,8 +49,15 @@ impl Sequencer {
         self.current_step += (self.current_step + 1) % self.events.len();
     }
 
+    pub fn set_sample_rate(&mut self, sample_rate: f32) {
+        self.sample_rate = sample_rate;
+        let beats_per_second = self.bpm / 60.0;
+        let samples_per_beat = sample_rate / beats_per_second;
+        self.samples_per_step = samples_per_beat / self.step_division as f32;
+    }
+
     //Gets the current events if there are any
-    pub fn get_current_events(&self) -> Option<&NoteEvent> {
+    pub fn get_current_event(&self) -> Option<&NoteEvent> {
         self.events.get(self.current_step).and_then(|e| e.as_ref())
     }
 

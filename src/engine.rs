@@ -44,7 +44,7 @@ impl AudioEngine {
             device,
             stream_config: config,
             channels,
-            mixer: Arc::new(Mutex::new(Mixer::new(sample_rate))),
+            mixer: Arc::new(Mutex::new(Mixer::new(sample_rate, 140.0))),
         })
     }
 
@@ -94,7 +94,6 @@ impl AudioEngine {
                     move |data: &mut [f32], _: &cpal::OutputCallbackInfo| {
                         for frame in data.chunks_mut(channels) {
                             let mixer_output = mixer.lock().unwrap().get_output();
-                            //TODO: This should be conunously running
                             // Write to all channels
                             for sample in frame.iter_mut() {
                                 *sample = mixer_output; // Reduced volume

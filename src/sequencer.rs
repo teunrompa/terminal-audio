@@ -1,99 +1,92 @@
-pub struct Pattern {
-    steps: Vec<Step>,
-    length: usize,
-    current_step: usize,
-}
+use std::vec;
 
-#[derive(Default, Clone)]
-pub struct Step {
-    pub active: bool,
-    pub velocity: u8,
-    pub note: Option<u8>,
-    pub probability: f32,
-}
-
-pub struct Clock {
-    bpm: f32,
-    sample_rate: u32,
-    samples_per_step: f32,
-    sample_counter: f32,
-    ppqn: u32, //pulses per quarter note
-}
-
+//The sequencer knows where all the events are in the sequnce
 pub struct Sequencer {
-    patterns: Vec<Pattern>,
-    active_pattern: usize,
-    clock: Clock,
-    playing: bool,
+    events: Vec<Option<NoteEvent>>,
+    bpm: f32,
+    sample_rate: f32,
+    current_step: usize,
+    samples_per_step: f32,
+    samples_accumulated: f32,
+    step_division: u8,
+}
+
+#[derive(Clone, Copy, Debug)]
+struct NoteEvent {
+    pub frequency: f32,
+    pub velocity: f32,
+    pub duration_steps: usize,
 }
 
 impl Sequencer {
-    pub fn new(bpm: f32, sample_rate: u32) -> Self {
+    pub fn new(bpm: f32, sample_rate: f32, length: usize, step_division: u8) -> Self {
         Sequencer {
-            patterns: vec![Pattern::new(16)],
-            active_pattern: 0,
-            clock: Clock::new(bpm, sample_rate, 16),
-            playing: false,
-        }
-    }
-
-    pub fn process(&mut self) -> Option<Step> {
-        if !self.playing {
-            return None;
-        }
-
-        if self.clock.tick() {
-            self.patterns[self.active_pattern].advance().cloned()
-        } else {
-            None
-        }
-    }
-}
-
-impl Pattern {
-    pub fn new(num_steps: usize) -> Self {
-        Pattern {
-            steps: vec![Step::default(); num_steps],
-            length: num_steps,
-            current_step: 0,
-        }
-    }
-
-    pub fn advance(&mut self) -> Option<&Step> {
-        let step = &self.steps[self.current_step];
-        self.current_step = (self.current_step + 1) % self.length;
-
-        if step.active { Some(step) } else { None }
-    }
-}
-
-impl Clock {
-    pub fn new(bpm: f32, sample_rate: u32, steps_per_beat: u32) -> Self {
-        let samples_per_step = (60.0 / bpm) * sample_rate as f32 / steps_per_beat as f32;
-
-        Clock {
+            events: vec![None; length],
             bpm,
             sample_rate,
-            samples_per_step,
-            sample_counter: 0.0,
-            ppqn: 24,
+            current_step: 0,
+            samples_accumulated: 0.0,
+            samples_per_step: 0.0,
+            step_division,
         }
     }
 
-    pub fn tick(&mut self) -> bool {
-        self.sample_counter += 1.0;
+    //Check step boundry. Returns true when boundry is hit
+    pub fn process(&mut self, num_samples: usize) -> bool {
+        self.samples_accumulated += num_samples as f32;
 
-        if self.sample_counter >= self.samples_per_step {
-            self.sample_counter -= self.samples_per_step;
+        if self.samples_accumulated >= self.samples_per_step {
+            self.samples_accumulated -= self.samples_per_step;
+            self.advance_step();
             true
         } else {
             false
         }
     }
 
-    pub fn set_bpm(&mut self, bpm: f32, steps_per_beat: u32) {
-        self.bpm = bpm;
+    //goto next step loop around when limit is reached
+    fn advance_step(&mut self) {
+        self.current_step += (self.current_step + 1) % self.events.len();
+    }
 
-        self.samples_per_step = (60.0 / bpm) * self.sample_rate as f32 / steps_per_beat as f32;
+    //Gets the current events if there are any
+    pub fn get_current_events(&self) -> Option<&NoteEvent> {
+        self.events.get(self.current_step).and_then(|e| e.as_ref())
+    }
+
+    pub fn set_note(&mut self, step: usize, frequency: f32, velocity: f32, duration: usize) {
+        if let Some(slot) = self.events.get_mut(step) {
+            *slot = Some(NoteEvent {
+                frequency,
+                velocity,
+                duration_steps: duration,
+            });
+        }
+    }
+
+    pub fn clear_step(&mut self, step: usize) {
+        if let Some(slot) = self.events.get_mut(step) {
+            *slot = None;
+        }
+    }
+
+    pub fn reset(&mut self) {
+        self.current_step = 0;
+        self.samples_accumulated = 0.0;
+    }
+
+    pub fn set_bpm(&mut self, bpm: f32) {
+        self.bpm = bpm;
+        let beats_per_second = bpm / 60.0;
+        let samples_per_beat = self.sample_rate / beats_per_second;
+        self.samples_per_step = samples_per_beat / self.step_division as f32;
+    }
+
+    pub fn current_step(&self) -> usize {
+        self.current_step
+    }
+
+    pub fn pattern_len(&self) -> usize {
+        self.events.len()
     }
 }

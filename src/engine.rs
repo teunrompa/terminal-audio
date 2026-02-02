@@ -22,7 +22,7 @@ pub struct AudioEngine {
 }
 
 #[derive(PartialEq, Clone)]
-enum AudioEngineState {
+pub enum AudioEngineState {
     Playing,
     Stopping,
 }
@@ -48,7 +48,11 @@ impl AudioEngine {
         })
     }
 
-    pub fn get_mixer(&self) -> MutexGuard<Mixer> {
+    pub fn get_engine_state(&'_ self) -> MutexGuard<'_, AudioEngineState> {
+        self.state.lock().unwrap()
+    }
+
+    pub fn get_mixer(&'_ self) -> MutexGuard<'_, Mixer> {
         self.mixer.lock().unwrap()
     }
 
@@ -83,7 +87,7 @@ impl AudioEngine {
         let mixer = Arc::clone(&self.mixer);
         let state = Arc::clone(&self.state);
 
-        let handle = thread::spawn(move || -> Result<(), Box<dyn std::error::Error + Send>> {
+        let _handle = thread::spawn(move || -> Result<(), Box<dyn std::error::Error + Send>> {
             let stream = device
                 .build_output_stream(
                     &stream_config.into(),

@@ -6,7 +6,7 @@ use ratatui::{
     widgets::{Block, Widget},
 };
 
-use crate::engine::AudioEngine;
+use crate::engine::{AudioEngine, AudioEngineState};
 
 pub struct App {
     app_state: AppState,
@@ -24,6 +24,7 @@ enum AppState {
 enum AppWindows {
     Mixer,
     DeviceEditor,
+    Sequencer,
 }
 
 impl App {
@@ -42,10 +43,6 @@ impl App {
         }
 
         Ok(())
-    }
-
-    fn get_audio_engine(&self) -> &AudioEngine {
-        &self.audio_engine
     }
 
     fn draw(&self, frame: &mut Frame) {
@@ -89,6 +86,12 @@ impl Widget for &App {
         let inner = block.inner(area);
 
         let mixer = self.audio_engine.get_mixer();
+        let state = self.audio_engine.get_engine_state();
+
+        let block = match *state {
+            AudioEngineState::Playing => block.title_top("Playing"),
+            AudioEngineState::Stopping => block.title_top("Stopping"),
+        };
 
         mixer.render(inner, buf);
 

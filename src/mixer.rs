@@ -15,6 +15,7 @@ pub struct Mixer {
     tracks: HashMap<usize, Track>,
     selected_track: usize,
     master_volume: f32,
+    increment_volume: f32,
 }
 
 impl Mixer {
@@ -24,6 +25,7 @@ impl Mixer {
             selected_track: 0,
             master_volume: 0.3,
             sample_rate,
+            increment_volume: 0.1,
         }
     }
 
@@ -51,7 +53,7 @@ impl Mixer {
             .insert(last_track_id, Track::new(volume, name, self.sample_rate));
     }
 
-    pub fn next_track(&mut self) {
+    fn next_track(&mut self) {
         if self.tracks.is_empty() {
             return;
         }
@@ -63,7 +65,7 @@ impl Mixer {
         }
     }
 
-    pub fn previous_track(&mut self) {
+    fn previous_track(&mut self) {
         if self.tracks.is_empty() {
             return;
         }
@@ -75,16 +77,40 @@ impl Mixer {
         }
     }
 
-    pub fn remove_track_at(&mut self, id: usize) {
+    fn remove_track_at(&mut self, id: usize) {
         self.tracks.remove_entry(&id);
+    }
+
+    fn get_selected_track(&mut self) -> Option<&mut Track> {
+        self.tracks.get_mut(&self.selected_track)
+    }
+
+    fn increment_selected_track_volume(&mut self) {
+        let increment = self.increment_volume;
+        let track = self.get_selected_track();
+
+        if let Some(track) = track {
+            track.increse_volume(increment);
+        }
+    }
+
+    fn decrease_selected_track_volume(&mut self) {
+        let increment = self.increment_volume;
+        let track = self.get_selected_track();
+
+        if let Some(track) = track {
+            track.decrease_volume(increment);
+        }
     }
 
     pub fn handle_keyboard_input(&mut self, key_event: KeyEvent) {
         match key_event.code {
-            KeyCode::Char('t') => self.add_track(10.0, "new track".to_string()),
+            KeyCode::Char('t') => self.add_track(0.3, "new track".to_string()),
             KeyCode::Char('r') => self.remove_track_at(self.selected_track),
             KeyCode::Right => self.next_track(),
             KeyCode::Left => self.previous_track(),
+            KeyCode::Up => self.increment_selected_track_volume(),
+            KeyCode::Down => self.decrease_selected_track_volume(),
             _ => {}
         }
     }
@@ -92,7 +118,7 @@ impl Mixer {
 
 impl Default for Mixer {
     fn default() -> Self {
-        Self::new(441000.0)
+        Self::new(44100.0)
     }
 }
 
@@ -120,9 +146,10 @@ impl Widget for &Mixer {
 
             bars.push(
                 Bar::default()
-                    .style(style)
-                    .value(track.get_volume() as u64)
-                    .text_value(track_name),
+                    .value((track.get_volume() * 100.0) as u64)
+                    .label("Volume")
+                    .text_value(format!("{track_name:>}"))
+                    .style(style),
             );
         }
 
@@ -130,8 +157,9 @@ impl Widget for &Mixer {
 
         BarChart::default()
             .bar_gap(10)
-            .bar_width(5)
+            .bar_width(7)
             .data(group)
+            .max(100)
             .render(area, buf);
     }
 }

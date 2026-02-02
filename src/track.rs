@@ -1,9 +1,12 @@
+use crate::sequencer::Sequencer;
+
 //Contains state of the voulume and the sound source
 pub struct Track {
     sample_rate: f32,
     phase: f32,
     volume: f32,
     name: String,
+    sequencer: Sequencer,
     instrument: Option<Box<dyn Instrument + Send>>,
 }
 
@@ -31,13 +34,21 @@ pub enum DeviceType {
 }
 
 impl Track {
-    pub fn new(volume: f32, name: String, sample_rate: f32) -> Self {
+    pub fn new(
+        volume: f32,
+        name: String,
+        sample_rate: f32,
+        bpm: f32,
+        length: usize,
+        step_division: u8,
+    ) -> Self {
         Track {
             sample_rate,
             phase: 0.0,
             volume,
             name,
             instrument: None,
+            sequencer: Sequencer::new(bpm, sample_rate, length, step_division),
         }
     }
 
@@ -56,6 +67,10 @@ impl Track {
 
     pub fn decrease_volume(&mut self, amount: f32) {
         self.volume -= amount;
+
+        if self.volume <= 0.0 {
+            self.volume = 0.0;
+        }
     }
 
     pub fn increse_volume(&mut self, amount: f32) {

@@ -92,9 +92,9 @@ impl App {
         if let Some(track) = mixer.selected_track() {
             let seq = track.sequencer_mut();
             seq.set_note_at(0, 144.0, 1.0); // Step 0
-            seq.set_note_at(4, 144.0, 0.9); // Step 4
-            seq.set_note_at(8, 144.0, 1.0); // Step 8
-            seq.set_note_at(12, 144.0, 0.9); // Step 12
+            seq.set_note_at(4, 60.0, 0.9); // Step 4
+            seq.set_note_at(8, 124.0, 1.0); // Step 8
+            seq.set_note_at(12, 90.0, 0.9); // Step 12
         }
     }
 

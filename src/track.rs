@@ -1,6 +1,8 @@
+use crate::generators::Instrument;
 use crate::sequencer::{NoteEvent, Sequencer};
 
-//Contains state of the voulume and the sound source
+//Contains state of the voulume and the sound source, processes all items on the chain
+//endpoint of sound goes to mixer
 pub struct Track {
     sample_rate: f32,
     phase: f32,
@@ -11,29 +13,6 @@ pub struct Track {
     bpm: f32,
     note_phase: f32,
     instrument: Option<Box<dyn Instrument + Send>>,
-}
-
-pub trait Instrument: Send {
-    fn get_current_sample(&self) -> f32;
-}
-
-pub trait Processor {
-    type Input;
-    type Output;
-
-    fn process(&self, input: Self::Input) -> Self::Output;
-}
-
-pub enum Oscilator {
-    Sine,
-    Square,
-    Triangle,
-}
-
-pub enum DeviceType {
-    Fx,
-    Synth,
-    Analyzer,
 }
 
 impl Track {

@@ -43,13 +43,13 @@ impl Mixer {
     pub fn process_block(&mut self, num_samples: usize) -> Vec<f32> {
         let mut mix = vec![0.0f32; num_samples];
 
-        for (_i, track) in &mut self.tracks {
+        self.tracks.iter_mut().for_each(|(_i, track)| {
             let track_output = track.process_block(num_samples);
 
             for (i, sample) in track_output.iter().enumerate() {
                 mix[i] += sample;
             }
-        }
+        });
 
         for sample in &mut mix {
             *sample = (*sample * self.master_volume).tanh(); //Softclipping 
@@ -72,18 +72,18 @@ impl Mixer {
     }
 
     //Create new track and store the id in the hashmap
-    pub fn add_track(&mut self, volume: f32, name: String, length: usize, step_division: u8) {
+    pub fn add_track(
+        &mut self,
+        volume: f32,
+        name: String,
+        length: usize,
+        step_division: u8,
+        sample_rate: f32,
+    ) {
         let id = self.next_id;
         self.next_id += 1;
 
-        let track = Track::new(
-            volume,
-            name,
-            self.sample_rate,
-            self.bpm,
-            length,
-            step_division,
-        );
+        let track = Track::new(volume, name, sample_rate, self.bpm, length, step_division);
 
         self.tracks.insert(id, track);
 
@@ -126,7 +126,7 @@ impl Mixer {
         }
     }
 
-    fn selected_track(&mut self) -> Option<&mut Track> {
+    pub fn selected_track(&mut self) -> Option<&mut Track> {
         self.track_order
             .get(self.selected_index)
             .and_then(|id| self.tracks.get_mut(id))
@@ -164,6 +164,10 @@ impl Mixer {
         }
     }
 
+    pub fn bpm(&self) -> f32 {
+        self.bpm
+    }
+
     pub fn set_sample_rate(&mut self, sample_rate: f32) {
         self.sample_rate = sample_rate;
 
@@ -175,7 +179,13 @@ impl Mixer {
     pub fn handle_keyboard_input(&mut self, key_event: KeyEvent) {
         match key_event.code {
             //TODO: implement params from the UI
-            KeyCode::Char('t') => self.add_track(0.3, format!("Track {}", self.next_id), 16, 16),
+            KeyCode::Char('t') => self.add_track(
+                0.3,
+                format!("Track {}", self.next_id),
+                16,
+                16,
+                self.sample_rate,
+            ),
             KeyCode::Char('r') => self.remove_selected_track(),
             KeyCode::Right => self.next_track(),
             KeyCode::Left => self.previous_track(),

@@ -15,18 +15,22 @@ pub struct Sequencer {
 pub struct NoteEvent {
     pub frequency: f32,
     pub velocity: f32,
-    pub duration_steps: usize,
 }
 
 impl Sequencer {
     pub fn new(bpm: f32, sample_rate: f32, length: usize, step_division: u8) -> Self {
+        // Calculate samples per step
+        let beats_per_second = bpm / 60.0;
+        let samples_per_beat = sample_rate / beats_per_second;
+        let samples_per_step = samples_per_beat / step_division as f32;
+
         Sequencer {
             events: vec![None; length],
             bpm,
             sample_rate,
             current_step: 0,
             samples_accumulated: 0.0,
-            samples_per_step: 0.0,
+            samples_per_step,
             step_division,
         }
     }
@@ -46,7 +50,7 @@ impl Sequencer {
 
     //goto next step loop around when limit is reached
     fn advance_step(&mut self) {
-        self.current_step += (self.current_step + 1) % self.events.len();
+        self.current_step = (self.current_step + 1) % self.events.len();
     }
 
     pub fn set_sample_rate(&mut self, sample_rate: f32) {
@@ -61,12 +65,11 @@ impl Sequencer {
         self.events.get(self.current_step).and_then(|e| e.as_ref())
     }
 
-    pub fn set_note(&mut self, step: usize, frequency: f32, velocity: f32, duration: usize) {
+    pub fn set_note_at(&mut self, step: usize, frequency: f32, velocity: f32) {
         if let Some(slot) = self.events.get_mut(step) {
             *slot = Some(NoteEvent {
                 frequency,
                 velocity,
-                duration_steps: duration,
             });
         }
     }
@@ -74,6 +77,14 @@ impl Sequencer {
     pub fn clear_step(&mut self, step: usize) {
         if let Some(slot) = self.events.get_mut(step) {
             *slot = None;
+        }
+    }
+
+    pub fn get_event(&self, id: usize) -> &Option<NoteEvent> {
+        if let Some(event) = self.events.get(id) {
+            event
+        } else {
+            &None
         }
     }
 

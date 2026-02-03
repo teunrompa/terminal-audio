@@ -58,6 +58,10 @@ impl Track {
         }
     }
 
+    pub fn get_current_note(&self) -> Option<NoteEvent> {
+        self.current_note
+    }
+
     pub fn get_name(&self) -> &str {
         &self.name
     }
@@ -99,6 +103,10 @@ impl Track {
         self.genrate_sample() * self.volume
     }
 
+    pub fn sequencer_mut(&mut self) -> &mut Sequencer {
+        &mut self.sequencer
+    }
+
     pub fn trigger_note(&mut self, note: NoteEvent) {
         self.current_note = Some(note);
         self.note_phase = 0.0;
@@ -117,7 +125,6 @@ impl Track {
 
                 sample * note.velocity
             }
-
             None => 0.0,
         }
     }

@@ -87,14 +87,14 @@ impl App {
         let mixer = self.audio_engine.get_mixer();
         let mut mixer = mixer.lock().unwrap();
 
-        mixer.add_track(0.8, "Kick".to_string(), 16, 16, self.get_sample_rate());
+        mixer.add_track(0.8, "Kick".to_string(), 16, 4, self.get_sample_rate());
 
         if let Some(track) = mixer.selected_track() {
             let seq = track.sequencer_mut();
             seq.set_note_at(0, 60.0, 1.0); // Step 0
-            seq.set_note_at(4, 144.0, 0.9); // Step 4
+            seq.set_note_at(4, 60.0, 0.9); // Step 4
             seq.set_note_at(8, 60.0, 1.0); // Step 8
-            seq.set_note_at(12, 144.0, 0.9); // Step 12
+            seq.set_note_at(12, 60.0, 0.9); // Step 12
         }
     }
 
@@ -127,7 +127,7 @@ impl App {
         let content = chunks[1];
         match self.current_window {
             AppWindow::Mixer => self.render_mixer(frame, content),
-            AppWindow::Sequencer => self.render_sequencer_placeholder(frame, content),
+            AppWindow::Sequencer => self.render_sequencer(frame, content),
         }
 
         // Footer with help
@@ -152,9 +152,18 @@ impl App {
         }
     }
 
-    fn render_sequencer_placeholder(&self, frame: &mut Frame, area: ratatui::prelude::Rect) {
+    fn render_sequencer(&self, frame: &mut Frame, area: ratatui::prelude::Rect) {
         let block = Block::default().title("Sequencer").borders(Borders::ALL);
+        let inner = block.inner(area);
         frame.render_widget(block, area);
+
+        let mixer = self.audio_engine.get_mixer();
+        if let Ok(mixer_guard) = &mut mixer.lock()
+            && let Some(track) = mixer_guard.selected_track()
+        {
+            let sequencer = track.sequencer(); // You'll need a getter method
+            frame.render_widget(sequencer, inner);
+        }
     }
 
     //TODO: these key inputs should only be avalable when the mixer window is open
@@ -177,7 +186,7 @@ impl App {
         }
     }
 
-    fn _next_window(&mut self) {
+    fn next_window(&mut self) {
         self.current_window = match self.current_window {
             AppWindow::Mixer => AppWindow::Sequencer,
             AppWindow::Sequencer => AppWindow::Mixer,
@@ -219,7 +228,7 @@ impl App {
     fn handle_keys(&mut self, key_event: KeyEvent) {
         match key_event.code {
             KeyCode::Char('q') => self.state = AppState::Exiting,
-            KeyCode::Char('l') => todo!(), //TODO: implement window switch
+            KeyCode::Tab => self.next_window(), //TODO: implement window switch
             _ => {}
         };
 

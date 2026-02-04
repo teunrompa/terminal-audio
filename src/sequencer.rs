@@ -1,5 +1,11 @@
 use std::vec;
 
+use ratatui::{
+    layout::Rect,
+    style::{Color, Style},
+    widgets::{Block, Widget},
+};
+
 //The sequencer knows where all the events are in the sequnce
 pub struct Sequencer {
     events: Vec<Option<NoteEvent>>,
@@ -106,5 +112,47 @@ impl Sequencer {
 
     pub fn pattern_len(&self) -> usize {
         self.events.len()
+    }
+}
+
+impl Widget for &Sequencer {
+    fn render(self, area: ratatui::prelude::Rect, buf: &mut ratatui::prelude::Buffer)
+    where
+        Self: Sized,
+    {
+        // Calculate step width
+        let step_width = area.width / self.events.len() as u16;
+
+        for (step_idx, event) in self.events.iter().enumerate() {
+            let x = area.x + (step_idx as u16 * step_width);
+            let cell_area = Rect {
+                x,
+                y: area.y,
+                width: step_width.saturating_sub(1), // Leave 1 char spacing
+                height: area.height,
+            };
+
+            // Determine style based on state
+            let style = if step_idx == self.current_step {
+                // Current playing step - bright highlight
+                Style::default().bg(Color::Yellow).fg(Color::Black)
+            } else if event.is_some() {
+                // Step has a note - filled
+                Style::default().bg(Color::Blue)
+            } else {
+                // Empty step
+                Style::default().bg(Color::DarkGray)
+            };
+
+            // Render the step cell
+            let block = Block::default().style(style);
+            block.render(cell_area, buf);
+
+            // Optionally show note info
+            if let Some(note) = event {
+                let freq_text = format!("{:.0}Hz", note.frequency);
+                buf.set_string(x, area.y, &freq_text, Style::default().fg(Color::White));
+            }
+        }
     }
 }

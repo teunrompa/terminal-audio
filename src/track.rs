@@ -88,6 +88,10 @@ impl Track {
         self.volume += amount;
     }
 
+    pub fn sequencer(&self) -> &Sequencer {
+        &self.sequencer
+    }
+
     pub fn set_bpm(&mut self, bpm: f32) {
         self.bpm = bpm;
     }

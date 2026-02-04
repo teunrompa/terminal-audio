@@ -38,10 +38,6 @@ impl Mixer {
         }
     }
 
-    pub fn prepare(&mut self, sample_rate: f32) {
-        self.sample_rate = sample_rate;
-    }
-
     //Main audio processing function
     pub fn process_block(&mut self, num_samples: usize) -> Vec<f32> {
         let mut mix = vec![0.0f32; num_samples];

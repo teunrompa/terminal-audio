@@ -54,8 +54,6 @@ impl App {
             }
         }
 
-        self.setup_test_pattern();
-
         if let Err(e) = self.audio_engine.start() {
             eprintln!("Failed to start audio {}", e);
         }
@@ -81,21 +79,6 @@ impl App {
 
     pub fn get_sample_rate(&self) -> f32 {
         self.audio_engine.sample_rate()
-    }
-
-    pub fn setup_test_pattern(&mut self) {
-        let mixer = self.audio_engine.get_mixer();
-        let mut mixer = mixer.lock().unwrap();
-
-        mixer.add_track(0.8, "Kick".to_string(), 16, 4, self.get_sample_rate());
-
-        if let Some(track) = mixer.selected_track() {
-            let seq = track.sequencer_mut();
-            seq.set_note_at(0, 60.0, 1.0); // Step 0
-            seq.set_note_at(4, 60.0, 0.9); // Step 4
-            seq.set_note_at(8, 60.0, 1.0); // Step 8
-            seq.set_note_at(12, 60.0, 0.9); // Step 12
-        }
     }
 
     fn draw(&self, frame: &mut Frame) {
@@ -224,15 +207,25 @@ impl App {
             .unwrap_or(0.0)
     }
 
-    //TODO: implement key handeling at specific context
     fn handle_keys(&mut self, key_event: KeyEvent) {
+        if let Ok(mut mixer) = self.audio_engine.get_mixer().lock() {
+            //Handle context
+            match self.current_window {
+                AppWindow::Mixer => mixer.handle_keyboard_input(key_event),
+                AppWindow::Sequencer => {
+                    if let Some(track) = mixer.selected_track() {
+                        let sequencer = track.sequencer_mut();
+
+                        sequencer.handle_keyboard_input(key_event);
+                    }
+                }
+            }
+        }
+
         match key_event.code {
             KeyCode::Char('q') => self.state = AppState::Exiting,
-            KeyCode::Tab => self.next_window(), //TODO: implement window switch
+            KeyCode::Tab => self.next_window(),
             _ => {}
         };
-
-        //Pass input down to lower levels
-        self.audio_engine.handle_keyboard_input(key_event);
     }
 }

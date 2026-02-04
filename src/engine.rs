@@ -108,18 +108,6 @@ impl AudioEngine {
         }
     }
 
-    pub fn handle_keyboard_input(&mut self, key_event: KeyEvent) {
-        if let Ok(mut mixer) = self.mixer.lock() {
-            mixer.handle_keyboard_input(key_event);
-        }
-
-        match key_event.code {
-            KeyCode::Char(' ') => self.toggle_playback(),
-            KeyCode::Char('w') => todo!(), //TODO: implement next window
-            _ => {}
-        }
-    }
-
     pub fn get_mixer(&self) -> Arc<Mutex<Mixer>> {
         Arc::clone(&self.mixer)
     }

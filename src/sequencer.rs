@@ -1,5 +1,6 @@
 use std::vec;
 
+use crossterm::event::{KeyCode, KeyEvent};
 use ratatui::{
     layout::Rect,
     style::{Color, Style},
@@ -12,6 +13,7 @@ pub struct Sequencer {
     bpm: f32,
     sample_rate: f32,
     current_step: usize,
+    selcected_step: usize,
     samples_per_step: f32,
     samples_accumulated: f32,
     step_division: u8,
@@ -38,6 +40,7 @@ impl Sequencer {
             samples_accumulated: 0.0,
             samples_per_step,
             step_division,
+            selcected_step: 0,
         }
     }
 
@@ -94,6 +97,26 @@ impl Sequencer {
         }
     }
 
+    fn increment_selected_step(&mut self) {
+        self.selcected_step = (self.selcected_step + 1) % self.events.len();
+    }
+
+    fn decrement_selected_step(&mut self) {
+        if self.selcected_step == 0 {
+            self.selcected_step = self.events.len() - 1;
+        } else {
+            self.selcected_step -= 1;
+        }
+    }
+
+    pub fn handle_keyboard_input(&mut self, key_event: KeyEvent) {
+        match key_event.code {
+            KeyCode::Right => self.increment_selected_step(),
+            KeyCode::Left => self.decrement_selected_step(),
+            _ => {}
+        }
+    }
+
     pub fn reset(&mut self) {
         self.current_step = 0;
         self.samples_accumulated = 0.0;
@@ -139,6 +162,8 @@ impl Widget for &Sequencer {
             } else if event.is_some() {
                 // Step has a note - filled
                 Style::default().bg(Color::Blue)
+            } else if step_idx == self.selcected_step {
+                Style::default().bg(Color::Green)
             } else {
                 // Empty step
                 Style::default().bg(Color::DarkGray)

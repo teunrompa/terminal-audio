@@ -50,7 +50,6 @@ impl AudioEngine {
         let mixer = Arc::clone(&self.mixer);
         let state = Arc::clone(&self.state);
         let chanels = self.channels as usize;
-        let sample_rate = self.sample_rate;
 
         let config = StreamConfig {
             channels: self.channels,

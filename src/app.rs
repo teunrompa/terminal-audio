@@ -87,14 +87,14 @@ impl App {
         let mixer = self.audio_engine.get_mixer();
         let mut mixer = mixer.lock().unwrap();
 
-        mixer.add_track(0.8, "Kick".to_string(), 16, 4, self.get_sample_rate());
+        mixer.add_track(0.8, "Kick".to_string(), 16, 16, self.get_sample_rate());
 
         if let Some(track) = mixer.selected_track() {
             let seq = track.sequencer_mut();
-            seq.set_note_at(0, 144.0, 1.0); // Step 0
-            seq.set_note_at(4, 60.0, 0.9); // Step 4
-            seq.set_note_at(8, 124.0, 1.0); // Step 8
-            seq.set_note_at(12, 90.0, 0.9); // Step 12
+            seq.set_note_at(0, 60.0, 1.0); // Step 0
+            seq.set_note_at(4, 144.0, 0.9); // Step 4
+            seq.set_note_at(8, 60.0, 1.0); // Step 8
+            seq.set_note_at(12, 144.0, 0.9); // Step 12
         }
     }
 

@@ -6,7 +6,10 @@ use ratatui::{
     widgets::{Bar, BarChart, BarGroup, Block, Borders, Widget},
 };
 
-use crate::track::Track;
+use crate::{
+    generators::{Envelope, PrimitiveWave, WaveType},
+    track::Track,
+};
 
 //Sums all levels from track and mixes it together
 //Also used for managing track behavoir on a high level
@@ -27,7 +30,7 @@ impl Mixer {
             tracks: HashMap::new(),
             track_order: Vec::new(),
             selected_index: 0,
-            master_volume: 0.3,
+            master_volume: 1.0,
             sample_rate,
             increment_volume: 0.1,
             bpm,
@@ -53,22 +56,10 @@ impl Mixer {
 
         for sample in &mut mix {
             *sample = (*sample * self.master_volume).tanh(); //Softclipping 
+            *sample = sample.clamp(-1.0, 1.0);
         }
 
         mix
-    }
-
-    pub fn get_output(&mut self) -> f32 {
-        let mut output = 0.0;
-
-        for track in self.tracks.iter_mut() {
-            output += track.1.get_output();
-        }
-
-        output *= self.master_volume;
-
-        //Limit the volume
-        output.clamp(-1.0, 1.0)
     }
 
     //Create new track and store the id in the hashmap
@@ -83,7 +74,14 @@ impl Mixer {
         let id = self.next_id;
         self.next_id += 1;
 
-        let track = Track::new(volume, name, sample_rate, self.bpm, length, step_division);
+        let mut track = Track::new(volume, name, sample_rate, self.bpm, length, step_division);
+
+        track.set_instrument(Box::new(PrimitiveWave::new(
+            144.0,
+            WaveType::Sine,
+            sample_rate,
+            Envelope::new(0.010, 0.01, 1.0, 0.03, sample_rate),
+        )));
 
         self.tracks.insert(id, track);
 

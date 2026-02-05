@@ -113,6 +113,10 @@ impl Sequencer {
         match key_event.code {
             KeyCode::Right => self.increment_selected_step(),
             KeyCode::Left => self.decrement_selected_step(),
+            KeyCode::Char('k') => self.set_note_at(self.selcected_step, 60.00, 1.0),
+            KeyCode::Char('l') => self.set_note_at(self.selcected_step, 144.00, 1.0),
+            KeyCode::Char('h') => self.set_note_at(self.selcected_step, 144.00 * 2.0, 1.0),
+            KeyCode::Char('c') => self.clear_step(self.selcected_step),
             _ => {}
         }
     }
@@ -159,11 +163,11 @@ impl Widget for &Sequencer {
             let style = if step_idx == self.current_step {
                 // Current playing step - bright highlight
                 Style::default().bg(Color::Yellow).fg(Color::Black)
+            } else if step_idx == self.selcected_step {
+                Style::default().bg(Color::Green)
             } else if event.is_some() {
                 // Step has a note - filled
                 Style::default().bg(Color::Blue)
-            } else if step_idx == self.selcected_step {
-                Style::default().bg(Color::Green)
             } else {
                 // Empty step
                 Style::default().bg(Color::DarkGray)

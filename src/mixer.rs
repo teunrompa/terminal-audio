@@ -177,7 +177,7 @@ impl Mixer {
                 0.3,
                 format!("Track {}", self.next_id),
                 16,
-                16,
+                4,
                 self.sample_rate,
             ),
             KeyCode::Char('r') => self.remove_selected_track(),

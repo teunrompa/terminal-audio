@@ -40,7 +40,6 @@ pub struct Envelope {
     sustain: f32, //level in db
     release: f32,
     phase: f32,
-    sample_rate: f32,
     state: EnvelopeState,
     current_level: f32,
 }
@@ -62,7 +61,6 @@ impl Envelope {
             sustain,
             release: release * sample_rate,
             phase: 0.0,
-            sample_rate,
             state: EnvelopeState::Idle,
             current_level: 0.0,
         }

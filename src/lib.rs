@@ -2,5 +2,7 @@ pub mod app;
 pub mod engine;
 pub mod generators;
 pub mod mixer;
+pub mod notes;
 pub mod sequencer;
 pub mod track;
+pub mod user_interface;

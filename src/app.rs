@@ -183,8 +183,6 @@ impl App {
         };
     }
 
-    // --- Helpers ---
-
     fn current_window_title(&self) -> &'static str {
         match self.current_window {
             AppWindow::Mixer => "Mixer",

@@ -7,6 +7,8 @@ use ratatui::{
     widgets::{Block, Widget},
 };
 
+use crate::user_interface::InputWindow;
+
 //The sequencer knows where all the events are in the sequnce
 pub struct Sequencer {
     events: Vec<Option<NoteEvent>>,
@@ -17,6 +19,7 @@ pub struct Sequencer {
     samples_per_step: f32,
     samples_accumulated: f32,
     step_division: u8,
+    sequencer_input_window: InputWindow,
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -41,6 +44,7 @@ impl Sequencer {
             samples_per_step,
             step_division,
             selcected_step: 0,
+            sequencer_input_window: InputWindow::new(),
         }
     }
 
@@ -110,13 +114,11 @@ impl Sequencer {
     }
 
     pub fn handle_keyboard_input(&mut self, key_event: KeyEvent) {
+        self.sequencer_input_window.handle_keyboard_input(key_event);
+
         match key_event.code {
             KeyCode::Right => self.increment_selected_step(),
             KeyCode::Left => self.decrement_selected_step(),
-            KeyCode::Char('k') => self.set_note_at(self.selcected_step, 60.00, 1.0),
-            KeyCode::Char('l') => self.set_note_at(self.selcected_step, 144.00, 1.0),
-            KeyCode::Char('h') => self.set_note_at(self.selcected_step, 144.00 * 2.0, 1.0),
-            KeyCode::Char('c') => self.clear_step(self.selcected_step),
             _ => {}
         }
     }
@@ -183,5 +185,7 @@ impl Widget for &Sequencer {
                 buf.set_string(x, area.y, &freq_text, Style::default().fg(Color::White));
             }
         }
+
+        self.sequencer_input_window.render(area, buf);
     }
 }

@@ -1,16 +1,14 @@
-use crate::generators::{EnvelopeState, Instrument};
+use crate::generators::Instrument;
 use crate::sequencer::Sequencer;
 
 //Contains state of the voulume and the sound source, processes all items on the chain
 //endpoint of sound goes to mixer
 pub struct Track {
     sample_rate: f32,
-    phase: f32,
     volume: f32,
     name: String,
     sequencer: Sequencer,
     bpm: f32,
-    note_phase: f32,
     instrument: Option<Box<dyn Instrument + Send>>,
 }
 
@@ -25,12 +23,10 @@ impl Track {
     ) -> Self {
         Track {
             sample_rate,
-            phase: 0.0,
             volume,
             name,
             instrument: None,
             sequencer: Sequencer::new(bpm, sample_rate, length, step_division),
-            note_phase: 0.0,
             bpm,
         }
     }

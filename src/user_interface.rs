@@ -69,7 +69,7 @@ impl InputWindow {
 
         if is_not_cursor_left_most {
             let current_index = self.characer_index - 1;
-            let from_left_to_current_index = current_index - 1;
+            let from_left_to_current_index = current_index - 1; //FIXME: bug where we pres delete on last instance that gives us out of bounds error
 
             let before_char_to_delete = self.input.chars().take(from_left_to_current_index);
 
@@ -108,6 +108,10 @@ impl InputWindow {
                 _ => {}
             },
         }
+    }
+
+    pub fn get_last_string_input(&self) -> &String {
+        &self.input
     }
 }
 

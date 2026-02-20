@@ -7,7 +7,7 @@ use ratatui::{
     widgets::{Block, Widget},
 };
 
-use crate::user_interface::InputWindow;
+use crate::{notes::Note, user_interface::InputWindow};
 
 //The sequencer knows where all the events are in the sequnce
 pub struct Sequencer {
@@ -119,6 +119,12 @@ impl Sequencer {
         match key_event.code {
             KeyCode::Right => self.increment_selected_step(),
             KeyCode::Left => self.decrement_selected_step(),
+            KeyCode::Char('i') => {
+                let input = self.sequencer_input_window.get_last_string_input();
+                if let Ok(note) = input.parse::<Note>() {
+                    self.set_note_at(self.current_step, note.freq(), 1.0)
+                }
+            }
             _ => {}
         }
     }
@@ -149,16 +155,17 @@ impl Widget for &Sequencer {
     where
         Self: Sized,
     {
-        // Calculate step width
+        // Calculate step width by dividing the area width with events length
         let step_width = area.width / self.events.len() as u16;
 
         for (step_idx, event) in self.events.iter().enumerate() {
+            //The step x = the step index multiplied by the x
             let x = area.x + (step_idx as u16 * step_width);
             let cell_area = Rect {
                 x,
                 y: area.y,
                 width: step_width.saturating_sub(1), // Leave 1 char spacing
-                height: area.height,
+                height: area.height, //TODO: Make this smaller in future impleementation so we can
             };
 
             // Determine style based on state

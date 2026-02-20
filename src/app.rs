@@ -10,6 +10,7 @@ use ratatui::{
     style::{Color, Style},
     widgets::{Block, Borders, Widget},
 };
+use tui_logger::{TuiLoggerWidget, TuiWidgetState};
 
 use crate::engine::{AudioEngine, AudioEngineState};
 
@@ -18,6 +19,7 @@ pub struct App {
     audio_engine: AudioEngine,
     current_window: AppWindow,
     last_update: Instant,
+    debug_state: TuiWidgetState,
 }
 
 #[derive(PartialEq, Default)]
@@ -33,16 +35,18 @@ enum AppWindow {
     #[default]
     Mixer,
     Sequencer,
+    Debug,
 }
 
 impl App {
-    pub fn new() -> io::Result<Self> {
+    pub fn new(debug_state: TuiWidgetState) -> io::Result<Self> {
         let audio_engine = AudioEngine::new().map_err(|e| io::Error::other(e.to_string()))?;
         Ok(App {
             state: AppState::Running,
             current_window: AppWindow::Mixer,
             audio_engine,
             last_update: Instant::now(),
+            debug_state,
         })
     }
     /// runs the application's main loop until the user quits
@@ -83,6 +87,7 @@ impl App {
 
     fn draw(&self, frame: &mut Frame) {
         let area = frame.area();
+        let debug_state = &self.debug_state;
 
         let chunks = Layout::default()
             .direction(ratatui::layout::Direction::Vertical)
@@ -108,9 +113,11 @@ impl App {
 
         // Main content area
         let content = chunks[1];
+
         match self.current_window {
             AppWindow::Mixer => self.render_mixer(frame, content),
             AppWindow::Sequencer => self.render_sequencer(frame, content),
+            AppWindow::Debug => self.render_debug_window(frame, debug_state),
         }
 
         // Footer with help
@@ -119,7 +126,7 @@ impl App {
             .title(" [Space] Play/Stop | [Tab] Window | [↑↓] Volume | [Q] Quit ");
         frame.render_widget(footer, chunks[2]);
     }
-
+    // --- Window rendering ---
     fn render_mixer(&self, frame: &mut Frame, area: ratatui::prelude::Rect) {
         let mixer = self.audio_engine.get_mixer();
 
@@ -149,37 +156,30 @@ impl App {
         }
     }
 
-    //TODO: these key inputs should only be avalable when the mixer window is open
-    fn _handle_mixer_keys(&mut self, key: KeyEvent) {
-        // Mixer-specific keys that App handles directly
-        match key.code {
-            // Add mixer-specific navigation here
-            KeyCode::Char('b') => todo!(),
-            KeyCode::Char('n') => todo!(),
-            _ => {}
-        }
-    }
-    //TODO: these key inputs should only be avalable when the sequencer window is open
-    fn _handle_sequencer_keys(&mut self, key: KeyEvent) {
-        // Sequencer editing mode
-        match key.code {
-            KeyCode::Char('b') => todo!(),
-            KeyCode::Char('n') => todo!(),
-            _ => {}
-        }
+    fn render_debug_window(&self, frame: &mut Frame, state: &TuiWidgetState) {
+        let area = frame.area();
+
+        TuiLoggerWidget::default()
+            .block(Block::bordered().title("Logs"))
+            .state(state)
+            .render(area, frame.buffer_mut());
     }
 
+    /// --- Window management ---
     fn next_window(&mut self) {
         self.current_window = match self.current_window {
             AppWindow::Mixer => AppWindow::Sequencer,
             AppWindow::Sequencer => AppWindow::Mixer,
+            AppWindow::Debug => AppWindow::Mixer,
         };
     }
 
+    //TODO: implement switching window tabs
     fn _previous_window(&mut self) {
         self.current_window = match self.current_window {
             AppWindow::Mixer => AppWindow::Sequencer,
             AppWindow::Sequencer => AppWindow::Mixer,
+            AppWindow::Debug => AppWindow::Mixer,
         };
     }
 
@@ -187,6 +187,7 @@ impl App {
         match self.current_window {
             AppWindow::Mixer => "Mixer",
             AppWindow::Sequencer => "Sequencer",
+            AppWindow::Debug => "Debug logs",
         }
     }
 
@@ -217,12 +218,14 @@ impl App {
                         sequencer.handle_keyboard_input(key_event);
                     }
                 }
+                AppWindow::Debug => {}
             }
         }
 
         match key_event.code {
             KeyCode::Char('q') => self.state = AppState::Exiting,
             KeyCode::Tab => self.next_window(),
+            KeyCode::Char('d') => self.current_window = AppWindow::Debug,
             _ => {}
         };
     }

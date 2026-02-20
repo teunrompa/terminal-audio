@@ -1,6 +1,7 @@
 use std::vec;
 
 use crossterm::event::{KeyCode, KeyEvent};
+use log::{info, warn};
 use ratatui::{
     layout::Rect,
     style::{Color, Style},
@@ -121,8 +122,15 @@ impl Sequencer {
             KeyCode::Left => self.decrement_selected_step(),
             KeyCode::Char('i') => {
                 let input = self.sequencer_input_window.get_last_string_input();
-                if let Ok(note) = input.parse::<Note>() {
-                    self.set_note_at(self.current_step, note.freq(), 1.0)
+
+                match input.parse::<Note>() {
+                    Ok(note) => {
+                        info!("Note {}", note.freq());
+                        self.set_note_at(self.selcected_step, note.freq(), 1.0);
+                    }
+                    Err(_) => {
+                        warn!("Unknown note {}", input);
+                    }
                 }
             }
             _ => {}

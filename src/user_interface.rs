@@ -1,7 +1,6 @@
 use crossterm::event::{KeyCode, KeyEvent};
 use ratatui::{
     layout::{Constraint, Flex, Layout, Rect},
-    text::{self, Text},
     widgets::{Block, Paragraph, Widget},
 };
 
@@ -111,7 +110,11 @@ impl InputWindow {
     }
 
     pub fn get_last_string_input(&self) -> &String {
-        &self.input
+        if let Some(last_input) = self.history.last() {
+            last_input
+        } else {
+            &self.input
+        }
     }
 }
 

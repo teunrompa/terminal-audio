@@ -30,16 +30,12 @@ impl Note {
     }
 }
 
+#[derive(Debug)]
 pub struct ParseNoteError;
 
-impl Widget for ParseNoteError {
-    fn render(self, area: ratatui::prelude::Rect, buf: &mut ratatui::prelude::Buffer)
-    where
-        Self: Sized,
-    {
-        let text = Paragraph::new("Error the input that you provided is not supported");
-
-        text.block(Block::default()).render(area, buf);
+impl std::fmt::Display for ParseNoteError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "invalid note string")
     }
 }
 

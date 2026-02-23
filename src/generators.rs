@@ -20,6 +20,8 @@ pub enum WaveType {
     Saw,
 }
 
+//TODO: we should be abale to select any instrument type put it in a list and select the
+//appropriate instrument
 pub struct PrimitiveWave {
     wave_type: WaveType,
     sample_rate: f32,

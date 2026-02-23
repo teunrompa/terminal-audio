@@ -1,4 +1,5 @@
 use crossterm::event::{KeyCode, KeyEvent};
+use log::info;
 use ratatui::{
     layout::{Constraint, Flex, Layout, Rect},
     widgets::{Block, Paragraph, Widget},
@@ -64,17 +65,23 @@ impl InputWindow {
     }
 
     fn delete_char(&mut self) {
-        let is_not_cursor_left_most = self.characer_index != 0;
+        let is_not_cursor_leftmost = self.characer_index != 0;
+        if is_not_cursor_leftmost {
+            // Method "remove" is not used on the saved text for deleting the selected char.
+            // Reason: Using remove on String works on bytes instead of the chars.
+            // Using remove would require special care because of char boundaries.
 
-        if is_not_cursor_left_most {
-            let current_index = self.characer_index - 1;
-            let from_left_to_current_index = current_index - 1; //FIXME: bug where we pres delete on last instance that gives us out of bounds error
+            let current_index = self.characer_index;
+            let from_left_to_current_index = current_index - 1;
 
+            // Getting all characters before the selected character.
             let before_char_to_delete = self.input.chars().take(from_left_to_current_index);
+            // Getting all characters after selected character.
+            let after_char_to_delete = self.input.chars().skip(current_index);
 
-            let after_chars_to_delete = self.input.chars().skip(current_index);
-
-            self.input = before_char_to_delete.chain(after_chars_to_delete).collect();
+            // Put all characters together except the selected one.
+            // By leaving the selected one out, it is forgotten and therefore deleted.
+            self.input = before_char_to_delete.chain(after_char_to_delete).collect();
             self.move_cursor_left();
         }
     }

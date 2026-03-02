@@ -2,6 +2,8 @@ use std::collections::HashMap;
 
 use crossterm::event::{KeyCode, KeyEvent};
 use ratatui::{
+    Frame,
+    layout::{Constraint, Direction, Layout},
     style::{Color, Style},
     widgets::{Bar, BarChart, BarGroup, Block, Borders, Widget},
 };
@@ -86,6 +88,7 @@ impl Mixer {
         self.selected_index = self.track_order.len() - 1;
     }
 
+    // ---- Track controls ----
     fn next_track(&mut self) {
         if self.track_order.is_empty() {
             return;
@@ -130,7 +133,6 @@ impl Mixer {
         self.tracks.get_mut(&id)
     }
 
-    //TODO: Set max volume
     fn increment_selected_track_volume(&mut self) {
         let inccrement = self.increment_volume;
         if let Some(track) = self.selected_track() {
@@ -172,7 +174,6 @@ impl Mixer {
 
     pub fn handle_keyboard_input(&mut self, key_event: KeyEvent) {
         match key_event.code {
-            //TODO: implement params from the UI
             KeyCode::Char('t') => self.add_track(
                 0.3,
                 format!("Track {}", self.next_id),
@@ -199,44 +200,44 @@ impl Widget for &Mixer {
             return;
         }
 
-        let bars: Vec<Bar> = self
+        // Outer block with mixer info
+        let block = Block::default()
+            .title(format!(
+                "Mixer | BPM {:.1} | Master: {:.0}%",
+                self.bpm,
+                self.master_volume * 100.0
+            ))
+            .borders(Borders::ALL);
+        let inner = block.inner(area);
+        block.render(area, buf);
+
+        // Split horizontally into equal columns per track
+        let constraints: Vec<Constraint> = self
             .track_order
             .iter()
-            .enumerate()
-            .map(|(idx, id)| {
-                let track = &self.tracks[id];
-                let is_selected = idx == self.selected_index;
-
-                let vol_percent = (track.get_volume() * 100.0) as u64;
-
-                let style = if is_selected {
-                    Style::default().fg(Color::Cyan).bg(Color::DarkGray)
-                } else {
-                    Style::default().fg(Color::Gray)
-                };
-
-                Bar::default()
-                    .value(vol_percent.clamp(0, 100))
-                    .label(track.get_name())
-                    .text_value(format!("Vol% {}", vol_percent))
-                    .style(style)
-            })
+            .map(|_| Constraint::Ratio(1, self.track_order.len() as u32))
             .collect();
 
-        BarChart::default()
-            .block(
-                Block::default()
-                    .title(format!(
-                        "Mixer | BPM {:.1} | Master: {:.0}%",
-                        self.bpm,
-                        self.master_volume * 100.0
-                    ))
-                    .borders(Borders::ALL),
-            )
-            .bar_width(10)
-            .bar_gap(2)
-            .data(BarGroup::new(bars))
-            .max(100)
-            .render(area, buf);
+        let columns = Layout::default()
+            .direction(Direction::Horizontal)
+            .constraints(constraints)
+            .split(inner);
+
+        for (col, id) in columns.iter().zip(self.track_order.iter()) {
+            let track = &self.tracks[id];
+            let is_selected = self
+                .track_order
+                .iter()
+                .position(|t| t == id)
+                .map(|idx| idx == self.selected_index)
+                .unwrap_or(false);
+
+            // Highlight selected track background
+            if is_selected {
+                buf.set_style(*col, Style::default().bg(Color::DarkGray));
+            }
+
+            track.render(*col, buf);
+        }
     }
 }

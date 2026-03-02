@@ -4,7 +4,6 @@ use cpal::{
     Device, Stream, StreamConfig,
     traits::{DeviceTrait, HostTrait, StreamTrait},
 };
-use crossterm::event::{KeyCode, KeyEvent};
 
 use crate::mixer::Mixer;
 

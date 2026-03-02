@@ -117,6 +117,10 @@ impl Sequencer {
     pub fn handle_keyboard_input(&mut self, key_event: KeyEvent) {
         self.sequencer_input_window.handle_keyboard_input(key_event);
 
+        if self.sequencer_input_window.is_editing() {
+            return;
+        }
+
         match key_event.code {
             KeyCode::Right => self.increment_selected_step(),
             KeyCode::Left => self.decrement_selected_step(),

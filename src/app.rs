@@ -166,6 +166,7 @@ impl App {
     }
 
     /// --- Window management ---
+    /// TODO: implement context window
     fn next_window(&mut self) {
         self.current_window = match self.current_window {
             AppWindow::Mixer => AppWindow::Sequencer,
@@ -222,6 +223,7 @@ impl App {
             }
         }
 
+        //TODO: fix implementation so that it does not go to debug when typing in the note
         match key_event.code {
             KeyCode::Char('q') => self.state = AppState::Exiting,
             KeyCode::Tab => self.next_window(),

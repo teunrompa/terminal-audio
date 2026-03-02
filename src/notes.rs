@@ -1,7 +1,5 @@
 use std::str::FromStr;
 
-use ratatui::widgets::{Block, Paragraph, Widget};
-
 macro_rules! notes {
     ($($name:ident),*) => {
         #[derive(Debug, Clone, Copy, PartialEq, Eq)]

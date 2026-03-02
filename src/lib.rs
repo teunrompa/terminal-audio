@@ -1,6 +1,7 @@
 pub mod app;
 pub mod engine;
 pub mod generators;
+pub mod input_handeler;
 pub mod mixer;
 pub mod notes;
 pub mod sequencer;

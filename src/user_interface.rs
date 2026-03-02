@@ -1,7 +1,7 @@
 use crossterm::event::{KeyCode, KeyEvent};
-use log::info;
 use ratatui::{
     layout::{Constraint, Flex, Layout, Rect},
+    style::Stylize,
     widgets::{Block, Paragraph, Widget},
 };
 
@@ -116,6 +116,10 @@ impl InputWindow {
         }
     }
 
+    pub fn is_editing(&self) -> bool {
+        self.input_mode == InputMode::Editing
+    }
+
     pub fn get_last_string_input(&self) -> &String {
         if let Some(last_input) = self.history.last() {
             last_input
@@ -145,7 +149,7 @@ impl Widget for &InputWindow {
 
         let block = Block::bordered().title("Popup");
         let area = popup_area(area, 60, 20);
-        let text_block = Paragraph::new(self.input.as_str()).block(block);
+        let text_block = Paragraph::new(self.input.as_str()).block(block).on_green();
 
         text_block.render(area, buf);
     }

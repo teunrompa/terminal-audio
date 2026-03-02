@@ -1,4 +1,14 @@
+use std::{collections::HashMap, fmt::format};
+
+use ratatui::{
+    Frame,
+    style::Style,
+    text::{Line, Span},
+    widgets::{Block, Borders, Paragraph, Widget},
+};
+
 pub trait Instrument: Send {
+    fn get_name(&self) -> &str;
     fn process(&mut self) -> f32;
     fn note_on(&mut self, frequency: f32);
     fn note_off(&mut self);
@@ -165,6 +175,18 @@ impl PrimitiveWave {
             self.phase -= 1.0
         }
     }
+
+    pub fn get_ui(&self, frame: &mut Frame) {
+        let block = Block::new()
+            .border_style(Style::new().blue())
+            .title("Parameters");
+
+        frame.render_widget(block, frame.area());
+    }
+
+    fn get_envelope_mut(&mut self) -> &mut Envelope {
+        &mut self.envelope
+    }
 }
 
 impl Instrument for PrimitiveWave {
@@ -213,5 +235,43 @@ impl Instrument for PrimitiveWave {
 
     fn get_phase(&self) -> f32 {
         self.phase
+    }
+
+    fn get_name(&self) -> &str {
+        "Primitive Wave"
+    }
+}
+
+impl Widget for &Envelope {
+    fn render(self, area: ratatui::prelude::Rect, buf: &mut ratatui::prelude::Buffer)
+    where
+        Self: Sized,
+    {
+        //Expose the adsr value
+        let params = [
+            ("attack", self.attack),
+            ("decay", self.decay),
+            ("sustain", self.sustain),
+            ("release", self.release),
+        ];
+
+        //Draw the parameters
+        let lines: Vec<Line> = params
+            .iter()
+            .map(|(name, value)| {
+                Line::from(vec![
+                    Span::raw(format!("{:<12}", name)),
+                    Span::raw(format!("{:.3}", value)),
+                ])
+            })
+            .collect();
+
+        let paragraph = Paragraph::new(lines).block(
+            Block::default()
+                .title_top("Primitive Wave Synth")
+                .borders(Borders::ALL),
+        );
+
+        paragraph.render(area, buf);
     }
 }

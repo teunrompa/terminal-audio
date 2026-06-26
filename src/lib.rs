@@ -5,5 +5,6 @@ pub mod input_handeler;
 pub mod mixer;
 pub mod notes;
 pub mod sequencer;
+pub mod sound_grid;
 pub mod track;
 pub mod user_interface;

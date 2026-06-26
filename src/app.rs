@@ -115,7 +115,7 @@ impl App {
         let content = chunks[1];
 
         match self.current_window {
-            AppWindow::Mixer => self.render_mixer(frame, content),
+            AppWindow::Mixer => todo!("add rendering implementation"),
             AppWindow::Sequencer => self.render_sequencer(frame, content),
             AppWindow::Debug => self.render_debug_window(frame, debug_state),
         }
@@ -125,21 +125,6 @@ impl App {
             .borders(Borders::ALL)
             .title(" [Space] Play/Stop | [Tab] Window | [↑↓] Volume | [Q] Quit ");
         frame.render_widget(footer, chunks[2]);
-    }
-    // --- Window rendering ---
-    fn render_mixer(&self, frame: &mut Frame, area: ratatui::prelude::Rect) {
-        let mixer = self.audio_engine.get_mixer();
-
-        // Lock once and render directly
-        if let Ok(mixer_guard) = mixer.lock() {
-            mixer_guard.render(area, frame.buffer_mut());
-        } else {
-            // Render error state if mutex poisoned
-            let block = Block::default()
-                .title("Mixer (Locked)")
-                .borders(Borders::ALL);
-            frame.render_widget(block, area);
-        }
     }
 
     fn render_sequencer(&self, frame: &mut Frame, area: ratatui::prelude::Rect) {

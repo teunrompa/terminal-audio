@@ -1,12 +1,6 @@
 use std::collections::HashMap;
 
 use crossterm::event::{KeyCode, KeyEvent};
-use ratatui::{
-    Frame,
-    layout::{Constraint, Direction, Layout},
-    style::{Color, Style},
-    widgets::{Bar, BarChart, BarGroup, Block, Borders, Widget},
-};
 
 use crate::{
     generators::{Envelope, PrimitiveWave, WaveType},
@@ -187,57 +181,6 @@ impl Mixer {
             KeyCode::Up => self.increment_selected_track_volume(),
             KeyCode::Down => self.decrease_selected_track_volume(),
             _ => {}
-        }
-    }
-}
-
-impl Widget for &Mixer {
-    fn render(self, area: ratatui::prelude::Rect, buf: &mut ratatui::prelude::Buffer)
-    where
-        Self: Sized,
-    {
-        if self.track_order.is_empty() {
-            return;
-        }
-
-        // Outer block with mixer info
-        let block = Block::default()
-            .title(format!(
-                "Mixer | BPM {:.1} | Master: {:.0}%",
-                self.bpm,
-                self.master_volume * 100.0
-            ))
-            .borders(Borders::ALL);
-        let inner = block.inner(area);
-        block.render(area, buf);
-
-        // Split horizontally into equal columns per track
-        let constraints: Vec<Constraint> = self
-            .track_order
-            .iter()
-            .map(|_| Constraint::Ratio(1, self.track_order.len() as u32))
-            .collect();
-
-        let columns = Layout::default()
-            .direction(Direction::Horizontal)
-            .constraints(constraints)
-            .split(inner);
-
-        for (col, id) in columns.iter().zip(self.track_order.iter()) {
-            let track = &self.tracks[id];
-            let is_selected = self
-                .track_order
-                .iter()
-                .position(|t| t == id)
-                .map(|idx| idx == self.selected_index)
-                .unwrap_or(false);
-
-            // Highlight selected track background
-            if is_selected {
-                buf.set_style(*col, Style::default().bg(Color::DarkGray));
-            }
-
-            track.render(*col, buf);
         }
     }
 }

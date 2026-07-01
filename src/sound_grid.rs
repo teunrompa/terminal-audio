@@ -53,7 +53,7 @@ impl Grid {
     }
 
     //Inserts a gridItem at cursor pos
-    pub fn insert_panel(
+    pub fn insert_cell(
         &mut self,
         cursor_pos: (usize, usize),
         panel: Box<dyn GridItem>,

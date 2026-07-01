@@ -12,14 +12,20 @@ use ratatui::{
 };
 use tui_logger::{TuiLoggerWidget, TuiWidgetState};
 
-use crate::engine::{AudioEngine, AudioEngineState};
+use crate::{
+    engine::{AudioEngine, AudioEngineState},
+    sound_grid::Grid,
+};
 
 pub struct App {
     state: AppState,
     audio_engine: AudioEngine,
+    grid: Grid,
     current_window: AppWindow,
     last_update: Instant,
     debug_state: TuiWidgetState,
+    tick_rate: Duration,
+    last_tick: Instant,
 }
 
 #[derive(PartialEq, Default)]
@@ -33,7 +39,7 @@ enum AppState {
 #[derive(Default)]
 enum AppWindow {
     #[default]
-    Mixer,
+    Grid,
     Sequencer,
     Debug,
 }
@@ -43,10 +49,13 @@ impl App {
         let audio_engine = AudioEngine::new().map_err(|e| io::Error::other(e.to_string()))?;
         Ok(App {
             state: AppState::Running,
-            current_window: AppWindow::Mixer,
+            current_window: AppWindow::Grid,
             audio_engine,
             last_update: Instant::now(),
             debug_state,
+            grid: Grid::new(15, 10),
+            tick_rate: Duration::from_millis(33),
+            last_tick: Instant::now(),
         })
     }
     /// runs the application's main loop until the user quits
@@ -63,11 +72,15 @@ impl App {
         }
 
         while self.state == AppState::Running {
-            terminal.draw(|frame| {
-                self.draw(frame);
-            })?;
+            let timeout = self.tick_rate.saturating_sub(self.last_tick.elapsed());
 
-            if event::poll(Duration::from_millis(16))?
+            if self.last_tick.elapsed() >= self.tick_rate {
+                terminal.draw(|frame| {
+                    self.draw(frame);
+                })?;
+            }
+
+            if event::poll(Duration::from_millis(timeout.as_secs()))?
                 && let Event::Key(key) = event::read()?
             {
                 self.handle_keys(key);
@@ -98,33 +111,14 @@ impl App {
             ])
             .split(area);
 
-        // Header with status
-        let header = Block::default()
-            .borders(Borders::ALL)
-            .title(format!(
-                " Terminal DAW | {} | {} | {:.0} BPM ",
-                self.current_window_title(),
-                self.playback_status(),
-                self.get_bpm()
-            ))
-            .title_style(Style::default().fg(Color::Cyan));
-
-        frame.render_widget(header, chunks[0]);
-
         // Main content area
         let content = chunks[1];
 
         match self.current_window {
-            AppWindow::Mixer => todo!("add rendering implementation"),
+            AppWindow::Grid => self.render_grid(frame, area),
             AppWindow::Sequencer => self.render_sequencer(frame, content),
             AppWindow::Debug => self.render_debug_window(frame, debug_state),
         }
-
-        // Footer with help
-        let footer = Block::default()
-            .borders(Borders::ALL)
-            .title(" [Space] Play/Stop | [Tab] Window | [↑↓] Volume | [Q] Quit ");
-        frame.render_widget(footer, chunks[2]);
     }
 
     fn render_sequencer(&self, frame: &mut Frame, area: ratatui::prelude::Rect) {
@@ -141,6 +135,10 @@ impl App {
         }
     }
 
+    fn render_grid(&self, frame: &mut Frame, area: ratatui::prelude::Rect) {
+        frame.render_widget(&self.grid, area);
+    }
+
     fn render_debug_window(&self, frame: &mut Frame, state: &TuiWidgetState) {
         let area = frame.area();
 
@@ -154,49 +152,28 @@ impl App {
     /// TODO: implement context window
     fn next_window(&mut self) {
         self.current_window = match self.current_window {
-            AppWindow::Mixer => AppWindow::Sequencer,
-            AppWindow::Sequencer => AppWindow::Mixer,
-            AppWindow::Debug => AppWindow::Mixer,
+            AppWindow::Grid => AppWindow::Sequencer,
+            AppWindow::Sequencer => AppWindow::Grid,
+            AppWindow::Debug => AppWindow::Grid,
         };
     }
 
     //TODO: implement switching window tabs
     fn _previous_window(&mut self) {
         self.current_window = match self.current_window {
-            AppWindow::Mixer => AppWindow::Sequencer,
-            AppWindow::Sequencer => AppWindow::Mixer,
-            AppWindow::Debug => AppWindow::Mixer,
+            AppWindow::Grid => AppWindow::Sequencer,
+            AppWindow::Sequencer => AppWindow::Grid,
+            AppWindow::Debug => AppWindow::Grid,
         };
-    }
-
-    fn current_window_title(&self) -> &'static str {
-        match self.current_window {
-            AppWindow::Mixer => "Mixer",
-            AppWindow::Sequencer => "Sequencer",
-            AppWindow::Debug => "Debug logs",
-        }
-    }
-
-    fn playback_status(&self) -> String {
-        match self.audio_engine.state() {
-            AudioEngineState::Playing => "▶ Playing".to_string(),
-            AudioEngineState::Stopped => "⏹ Stopped".to_string(),
-        }
-    }
-
-    fn get_bpm(&self) -> f32 {
-        self.audio_engine
-            .get_mixer()
-            .lock()
-            .map(|m| m.bpm())
-            .unwrap_or(0.0)
     }
 
     fn handle_keys(&mut self, key_event: KeyEvent) {
         if let Ok(mut mixer) = self.audio_engine.get_mixer().lock() {
             //Handle context
             match self.current_window {
-                AppWindow::Mixer => mixer.handle_keyboard_input(key_event),
+                AppWindow::Grid => {
+                    self.grid.handle_navigate(key_event);
+                }
                 AppWindow::Sequencer => {
                     if let Some(track) = mixer.selected_track() {
                         let sequencer = track.sequencer_mut();

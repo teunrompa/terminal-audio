@@ -7,15 +7,11 @@ use crossterm::event::{self, Event, KeyCode, KeyEvent};
 use ratatui::{
     DefaultTerminal, Frame,
     layout::{Constraint, Layout},
-    style::{Color, Style},
     widgets::{Block, Borders, Widget},
 };
 use tui_logger::{TuiLoggerWidget, TuiWidgetState};
 
-use crate::{
-    engine::{AudioEngine, AudioEngineState},
-    sound_grid::Grid,
-};
+use crate::{engine::AudioEngine, sound_grid::Grid};
 
 pub struct App {
     state: AppState,
@@ -53,7 +49,7 @@ impl App {
             audio_engine,
             last_update: Instant::now(),
             debug_state,
-            grid: Grid::new(15, 10),
+            grid: Grid::new(250, 100),
             tick_rate: Duration::from_millis(33),
             last_tick: Instant::now(),
         })
@@ -172,7 +168,7 @@ impl App {
             //Handle context
             match self.current_window {
                 AppWindow::Grid => {
-                    self.grid.handle_navigate(key_event);
+                    self.grid.handle_key(key_event);
                 }
                 AppWindow::Sequencer => {
                     if let Some(track) = mixer.selected_track() {
